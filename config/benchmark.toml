@@ -1,0 +1,74 @@
+# Project configuration. Code defaults live in src/txbench/config.py; anything
+# set here overrides them, and `bench collect` logs the effective settings and
+# writes them into the cost report.
+#
+# Nothing secret belongs in this file. A provider carries the *name* of the
+# environment variable holding its key (see .env.example), never a key.
+
+[cohort]
+chain_id = 1
+release_dir = "data/upstream/txbench"
+
+[collect]
+pilot_size = 20
+seed = 42
+# Fuses for one run. Reaching one stops the run cleanly and says so.
+max_calls = 20000
+max_retries = 4
+retry_base_delay_s = 0.5
+retry_max_delay_s = 30.0
+request_timeout_s = 30.0
+max_stored_payload_bytes = 33554432
+# Re-read the envelope and receipt even where the release already supplies
+# them, to cross-check the release against the chain. Off by default: the base
+# dataset needs no provider call at all.
+verify_upstream = false
+
+[features]
+# 1 keeps every token a training row produced.
+min_train_frequency = 1
+fit_split = "temporal"
+
+[splits]
+primary = "temporal"
+secondary = ["protocol"]
+metadata_only = ["cross_chain"]
+validation_fraction = 0.2
+validation_seed = 42
+
+# --- providers ---------------------------------------------------------------
+# Account plans differ. Override the limits here and the run will log and
+# report whatever is set. Debug and Trace methods stay disabled: they are
+# excluded from the free plans this project targets, and no paid plan is
+# activated.
+
+[providers.alchemy]
+enabled = true
+key_var = "ALCHEMY_API_KEY"
+concurrency = 4
+rate_limit_units_per_s = 300.0        # Free plan: 300 CU/s
+run_unit_budget = 400000
+plan_unit_allowance = 30000000        # Free plan: 30M CU/month
+disabled_methods = ["debug_traceTransaction", "trace_transaction"]
+
+[providers.alchemy.method_units]
+eth_getTransactionByHash = 20
+eth_getTransactionReceipt = 20
+eth_getBlockByNumber = 20
+eth_getBlockByHash = 20
+eth_chainId = 0
+_default = 20
+
+[providers.drpc]
+enabled = true
+key_var = "DRPC_API_KEY"
+concurrency = 2
+rate_limit_units_per_s = 30.0
+run_unit_budget = 20000
+plan_unit_allowance = 10000000        # Free tier: ~10M equivalent requests
+# dRPC's Ethereum debug/trace methods are paid, so they stay off.
+disabled_methods = ["debug_traceTransaction", "trace_transaction"]
+
+[providers.drpc.method_units]
+_default = 1
+eth_chainId = 0

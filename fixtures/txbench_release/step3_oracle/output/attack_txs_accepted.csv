@@ -1,0 +1,5 @@
+tx_hash,chain,vuln_type,vuln_type_blocksec,vuln_type_registry,scwe_ids,scwe_titles,attack_class
+0x0101010101010101010101010101010101010101010101010101010101010101,eth,vuln/oracle/price-manipulation,,,SCWE-050,Price Oracle Manipulation,exploit
+0x0404040404040404040404040404040404040404040404040404040404040404,eth,vuln/defi/sandwich-attack,,,,Extractable Value from Predictable Transaction Ordering,exploit
+0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e,eth,Reentrancy,,,,Reentrancy Attacks,exploit
+0x0707070707070707070707070707070707070707070707070707070707070707,eth,Compromised Private Key,,,,,key_compromise

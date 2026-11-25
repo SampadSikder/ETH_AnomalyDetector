@@ -1,0 +1,32 @@
+# Project environment for the ETH_AnomalyDetector / TxBench benchmark.
+#
+# Create once:
+#   conda env create -n txbench -f environment.yml
+# Run everything through it:
+#   conda run -n txbench bench --help
+#   conda run -n txbench python -c "import sys; print(sys.executable)"
+#
+# System Python and Conda's `base` environment are deliberately not supported.
+name: txbench
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  # data / IO
+  - pandas>=2.0
+  - pyarrow>=14
+  - numpy>=1.24
+  - requests>=2.31
+  - python-dotenv>=1.0
+  # metrics
+  - scikit-learn>=1.3
+  # tests
+  - pytest>=7.4
+  # required by the pinned BlockScan preprocessing entry point we import
+  - tqdm>=4.66
+  - pip:
+      # Installed with the environment's own `python -m pip`.
+      # Optional backfill extras are NOT installed by default; see docs/COLLECTION.md
+      #   google-cloud-bigquery>=3.17   # only if a BigQuery free-tier backfill is used
+      - -e .

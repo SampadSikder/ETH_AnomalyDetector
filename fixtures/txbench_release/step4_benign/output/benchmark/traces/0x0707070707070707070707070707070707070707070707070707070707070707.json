@@ -1,0 +1,55 @@
+{
+ "block_hash": "0xabababababababababababababababababababababababababababababababab",
+ "block_number": "4000000",
+ "block_timestamp": "2017-06-01T00:00:00.000Z",
+ "decoded_call": null,
+ "from_address": "0x1010101010101010101010101010101010101010",
+ "gas": "200000",
+ "gas_price": "12000000000",
+ "hash": "0x0707070707070707070707070707070707070707070707070707070707070707",
+ "input": "0xb61d27f600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+ "internal_transactions": [
+  {
+   "block_hash": "0xabababababababababababababababababababababababababababababababab",
+   "block_number": 18000000,
+   "error": null,
+   "from": "0x2020202020202020202020202020202020202020",
+   "gas": "50000",
+   "gas_used": "20000",
+   "input": "0xb61d27f6",
+   "output": "0x",
+   "to": "0x2626262626262626262626262626262626262626",
+   "transaction_hash": "0x0707070707070707070707070707070707070707070707070707070707070707",
+   "type": "DELEGATECALL",
+   "value": ""
+  }
+ ],
+ "logs": [
+  {
+   "address": "0x2020202020202020202020202020202020202020",
+   "block_hash": "0xabababababababababababababababababababababababababababababababab",
+   "block_number": "18000000",
+   "block_timestamp": "2024-03-01T00:00:00.000Z",
+   "data": "0x0000000000000000000000000000000000000000000000000000000000000001",
+   "decoded_event": null,
+   "log_index": "0",
+   "topic0": "0x9797979797979797979797979797979797979797979797979797979797979797",
+   "topic1": null,
+   "topic2": null,
+   "topic3": null,
+   "transaction_hash": "0x0707070707070707070707070707070707070707070707070707070707070707",
+   "transaction_index": "7",
+   "transaction_value": "0"
+  }
+ ],
+ "nonce": "3",
+ "receipt_contract_address": null,
+ "receipt_cumulative_gas_used": "900000",
+ "receipt_gas_used": "120000",
+ "receipt_root": "0x7373737373737373737373737373737373737373737373737373737373737373",
+ "receipt_status": "",
+ "to_address": "0x2020202020202020202020202020202020202020",
+ "transaction_fee": "0.001",
+ "transaction_index": "7",
+ "value": "0"
+}

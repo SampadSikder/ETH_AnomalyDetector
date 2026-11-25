@@ -1,0 +1,9 @@
+FIXTURE DATA - NOT THE REAL TxBENCH RELEASE
+===========================================
+
+Hand-written records used to exercise the importer, the extractors, the flow graph and
+the adapters offline, with no credentials and no real labels. Every artefact derived
+from this directory is marked `is_fixture: true`, and no accuracy claim about any
+detector may be based on it.
+
+Each row below exists to pin one behaviour; see tests/test_fixture_release.py.

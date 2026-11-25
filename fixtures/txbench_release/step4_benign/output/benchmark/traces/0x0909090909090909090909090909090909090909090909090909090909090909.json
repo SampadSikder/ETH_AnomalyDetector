@@ -1,0 +1,23 @@
+{
+ "block_hash": "0xabababababababababababababababababababababababababababababababab",
+ "block_number": "18000000",
+ "block_timestamp": "2024-03-01T00:00:00.000Z",
+ "decoded_call": null,
+ "from_address": "0x1010101010101010101010101010101010101010",
+ "gas": "200000",
+ "gas_price": "12000000000",
+ "hash": "0x0909090909090909090909090909090909090909090909090909090909090909",
+ "input": "0x095ea7b300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+ "internal_transactions": [],
+ "logs": [],
+ "nonce": "3",
+ "receipt_contract_address": null,
+ "receipt_cumulative_gas_used": "900000",
+ "receipt_gas_used": "120000",
+ "receipt_root": null,
+ "receipt_status": "1",
+ "to_address": "0x2020202020202020202020202020202020202020",
+ "transaction_fee": "0.001",
+ "transaction_index": "7",
+ "value": "0"
+}

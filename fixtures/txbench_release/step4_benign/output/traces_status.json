@@ -1,0 +1,86 @@
+{
+ "0x0101010101010101010101010101010101010101010101010101010101010101": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0101010101010101010101010101010101010101010101010101010101010101"
+ },
+ "0x0202020202020202020202020202020202020202020202020202020202020202": {
+  "chain": "eth",
+  "internal_calls_source": "no_code_executed",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0202020202020202020202020202020202020202020202020202020202020202"
+ },
+ "0x0303030303030303030303030303030303030303030303030303030303030303": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0303030303030303030303030303030303030303030303030303030303030303"
+ },
+ "0x0404040404040404040404040404040404040404040404040404040404040404": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "fixture: an intentionally incomplete call tree",
+  "status": "partial",
+  "tx_hash": "0x0404040404040404040404040404040404040404040404040404040404040404"
+ },
+ "0x0505050505050505050505050505050505050505050505050505050505050505": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0505050505050505050505050505050505050505050505050505050505050505"
+ },
+ "0x0606060606060606060606060606060606060606060606060606060606060606": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0606060606060606060606060606060606060606060606060606060606060606"
+ },
+ "0x0707070707070707070707070707070707070707070707070707070707070707": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0707070707070707070707070707070707070707070707070707070707070707"
+ },
+ "0x0909090909090909090909090909090909090909090909090909090909090909": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0909090909090909090909090909090909090909090909090909090909090909"
+ },
+ "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a"
+ },
+ "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"
+ },
+ "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d"
+ },
+ "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e": {
+  "chain": "eth",
+  "internal_calls_source": "rpc_trace",
+  "notes": "",
+  "status": "ok",
+  "tx_hash": "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e"
+ }
+}

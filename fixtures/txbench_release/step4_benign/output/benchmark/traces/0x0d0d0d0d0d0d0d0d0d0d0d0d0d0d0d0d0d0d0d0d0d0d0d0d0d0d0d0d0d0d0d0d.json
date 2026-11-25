@@ -1,0 +1,52 @@
+{
+ "block_hash": "0xabababababababababababababababababababababababababababababababab",
+ "block_number": "18000000",
+ "block_timestamp": "2024-03-01T00:00:00.000Z",
+ "decoded_call": null,
+ "from_address": "0x1010101010101010101010101010101010101010",
+ "gas": "200000",
+ "gas_price": "12000000000",
+ "hash": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+ "input": "0x12345678aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+ "internal_transactions": [
+  {
+   "block_hash": "0xabababababababababababababababababababababababababababababababab",
+   "block_number": 18000000,
+   "error": null,
+   "from": "0x1010101010101010101010101010101010101010",
+   "gas": "50000",
+   "gas_used": "20000",
+   "input": "0x12345678aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "output": "0x",
+   "to": "0x2020202020202020202020202020202020202020",
+   "transaction_hash": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+   "type": "CALL",
+   "value": ""
+  },
+  {
+   "block_hash": "0xabababababababababababababababababababababababababababababababab",
+   "block_number": 18000000,
+   "error": null,
+   "from": "0x2020202020202020202020202020202020202020",
+   "gas": "50000",
+   "gas_used": "20000",
+   "input": "0x87654321",
+   "output": "0x",
+   "to": "0x2727272727272727272727272727272727272727",
+   "transaction_hash": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+   "type": "CALL",
+   "value": ""
+  }
+ ],
+ "logs": [],
+ "nonce": "3",
+ "receipt_contract_address": null,
+ "receipt_cumulative_gas_used": "900000",
+ "receipt_gas_used": "120000",
+ "receipt_root": null,
+ "receipt_status": "1",
+ "to_address": "0x2020202020202020202020202020202020202020",
+ "transaction_fee": "0.001",
+ "transaction_index": "7",
+ "value": "0"
+}
