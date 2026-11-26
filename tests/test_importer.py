@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import H
+from conftest import H, REPO
 
 
 def test_fixture_is_marked_as_fixture(imported):
@@ -90,3 +90,17 @@ def test_manifest_round_trips(imported, tmp_path):
                              quarantine_path=tmp_path / "q.parquet")
     reloaded = load_manifest(written["manifest"])
     assert list(reloaded["tx_key"]) == list(imported.manifest["tx_key"])
+
+
+def test_the_shipped_config_pins_the_release_doi():
+    """The DOI must survive a plain `bench import-txbench` with no --doi flag.
+
+    It was once supplied only by the CLI flag, so a bare re-import overwrote the
+    recorded DOI with null and lost provenance section 1 requires.
+    """
+    from txbench.config import load_config
+
+    cfg = load_config(REPO / "config" / "benchmark.toml")
+    assert cfg.release_doi, "cohort.release_doi is not pinned in config/benchmark.toml"
+    assert cfg.release_doi.startswith("10."), cfg.release_doi
+    assert cfg.effective_settings()["release_doi"] == cfg.release_doi

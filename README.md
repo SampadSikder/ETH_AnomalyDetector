@@ -1,19 +1,19 @@
 # ETH_AnomalyDetector
 
 Anomaly detection benchmark of SoTA detectors, compared against an FT-Transformer
-classifier, on a frozen cohort of **real historical Ethereum mainnet transactions**.
+classifier, on a frozen set of **real historical Ethereum mainnet transactions**.
 
 Milestone 1 — this repository's current state — is the dataset and the evaluation
-interface: a reproducible, labeled, auditable cohort that a second researcher can
+interface: a reproducible, labeled, auditable transaction set that a second researcher can
 rebuild and check. **No model is trained yet, and no accuracy claim is made.**
 
 ## What exists today
 
 | | |
 |---|---|
-| Cohort | **1,632** Ethereum mainnet transactions: **544 attacks** (386 exploit, 158 key compromise) and **1,088** evidence-backed negatives |
+| Transaction set | **1,632** Ethereum mainnet transactions: **544 attacks** (386 exploit, 158 key compromise) and **1,088** evidence-backed negatives |
 | Source | [TxBench v1.0.1](https://doi.org/10.5281/zenodo.23758032), md5-verified, CC BY 4.0 ([paper](https://arxiv.org/abs/2611.04411v1)) |
-| Cohort digest | `b07e892a606422dff1fd280bcd940c60f400fcba67f6eb3231084c02f4d81fcf` (sorted `tx_key`, `label`) |
+| Transaction-list fingerprint | `b07e892a606422dff1fd280bcd940c60f400fcba67f6eb3231084c02f4d81fcf` (sorted `tx_key`, `label`) |
 | Quarantined | 0 rows — and an unknown label, an RPC failure or a revert is never read as benign |
 | RPC calls needed | **0** for the base dataset; the release already supplies every envelope, receipt and call tree |
 | Feature views | two, both at 100 % coverage: `tx-receipt` (690 tokens) and `full-calls-receipt` (2,096 tokens) |
@@ -78,7 +78,7 @@ conda run -n txbench bench report
 
 ## Documentation
 
-- [docs/DATASET.md](docs/DATASET.md) — the cohort, its provenance, the schema mapping, licensing
+- [docs/DATASET.md](docs/DATASET.md) — the transaction set, its provenance, the schema mapping, licensing
 - [docs/COLLECTION.md](docs/COLLECTION.md) — the cache-first collector, budgets, providers, enrichment routes
 - [docs/FEATURES.md](docs/FEATURES.md) — the two feature views and their exact definitions
 - [docs/DETECTORS.md](docs/DETECTORS.md) — per-detector field contracts, evidence levels, coverage
@@ -93,7 +93,7 @@ config/             benchmark.toml - overridable limits, logged with every run
 fixtures/           a marked FIXTURE release and an example prediction file
 tests/              offline tests plus real-data acceptance checks
 data/   (ignored)   upstream release, raw cache, manifest, features, splits, evaluation
-reports/ (ignored)  generated cohort and status reports
+reports/ (ignored)  generated transaction-set and status reports
 ```
 
 Upstream data is treated as read-only evidence: it is never modified, never mixed

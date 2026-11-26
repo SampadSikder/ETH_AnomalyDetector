@@ -140,6 +140,7 @@ class SplitConfig:
 class Config:
     chain_id: int = ETHEREUM_MAINNET
     release_dir: Path = Path("data/upstream/txbench")
+    release_doi: str | None = None
     collect: CollectConfig = field(default_factory=CollectConfig)
     features: FeatureConfig = field(default_factory=FeatureConfig)
     splits: SplitConfig = field(default_factory=SplitConfig)
@@ -159,6 +160,7 @@ class Config:
         out = {
             "chain_id": self.chain_id,
             "release_dir": str(self.release_dir),
+            "release_doi": self.release_doi,
             "config_file": str(self.source_file) if self.source_file else None,
             "collect": asdict(self.collect),
             "features": asdict(self.features),
@@ -196,6 +198,8 @@ def load_config(path: Path | None = None, root: Path | None = None) -> Config:
         cfg.chain_id = int(cohort["chain_id"])
     if "release_dir" in cohort:
         cfg.release_dir = Path(cohort["release_dir"])
+    if "release_doi" in cohort:
+        cfg.release_doi = str(cohort["release_doi"]) or None
 
     for section, kind in _SECTION_TYPES.items():
         values = raw.get(section) or {}

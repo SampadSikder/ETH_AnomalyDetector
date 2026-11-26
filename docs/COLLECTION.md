@@ -12,7 +12,7 @@ The collector's first job is not to fetch. It is:
 5. **reconcile** every fetched record against the upstream one, and store it with
    provenance.
 
-## What this cost on the real cohort
+## What this cost on the real transaction set
 
 | scenario | transactions | calls | Alchemy CU | share of the 30M monthly free allowance |
 |---|---|---|---|---|
@@ -32,7 +32,7 @@ shared across every transaction in that block.
 
 ## What is genuinely missing, and where it would come from
 
-| data | status on this cohort | route |
+| data | status on this transaction set | route |
 |---|---|---|
 | envelope, top-level calldata | supplied for 1,632/1,632 | upstream; else `eth_getTransactionByHash` |
 | receipt, outcome, emitting addresses, ordered topics, log data | supplied for 1,632/1,632 | upstream; else `eth_getTransactionReceipt` |

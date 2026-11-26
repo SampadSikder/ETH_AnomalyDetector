@@ -21,7 +21,7 @@ nobody ran anything, so each is a distinct value:
 Per-transaction verdicts are `usable`, `partial` or `blocked`, and **a blocked
 record stays in the denominator.**
 
-## Coverage on the real cohort (1,632 transactions)
+## Coverage on the real transaction set (1,632 transactions)
 
 | detector | eligible | usable | partial | blocked | binding missing field | evidence attained |
 |---|---|---|---|---|---|---|
@@ -109,7 +109,7 @@ so no substitute is offered. Both gaps are flagged per transaction.
 [IACR ePrint 2025/1634](https://eprint.iacr.org/2025/1634), Appendix A (the trace
 tokenizer). It needs the ordered opcode sequence with operands and the
 stack/memory/storage information the tokenizer reads. None exists for this
-cohort. Transaction boundaries and a deterministic chunk order are available and
+set. Transaction boundaries and a deterministic chunk order are available and
 would be derivable once an instruction stream existed.
 
 Top-level calldata and nested call trees cannot supply an instruction sequence,
@@ -144,7 +144,7 @@ Ambiguities, each named rather than guessed:
 - **ERC-20 / ERC-721 signature ambiguity**: both use one `Transfer` topic 0. The
   standard shapes separate (three topics + 32 data bytes → fungible; four topics
   + empty data → a token id, which has no fungible amount); anything else stays
-  `ambiguous`. 47 such edges exist in the cohort.
+  `ambiguous`. 47 such edges exist in the transaction set.
 - **A half-known transfer is excluded from the profit score.** Debiting a sender
   whose counterparty could not be resolved would invent a loss, so the edge is
   kept and the exclusion is counted with its reason.

@@ -4,7 +4,7 @@ Two views exist so a missing historical call tree cannot silently change the
 experiment. Both are exported for the FT-Transformer, and **coverage is reported
 per view, separately.**
 
-| view | one row per transaction | coverage on the real cohort | vocabulary |
+| view | one row per transaction | coverage on the real transaction set | vocabulary |
 |---|---|---|---|
 | `tx-receipt` | the top-level selector candidate, plus one count per distinct receipt-log first topic | 1,632 / 1,632 | 690 tokens |
 | `full-calls-receipt` | one count per distinct selector candidate over **every** call frame, the outer call included **exactly once**, plus the same receipt-topic counts | 1,632 / 1,632 | 2,096 tokens |

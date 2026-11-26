@@ -9,13 +9,13 @@ protocol or sender appears on both sides, which is precisely why the protocol an
 address splits exist. Overlap is reported for every group column either way; only
 a broken promise counts as a conflict.
 
-| split | promises to keep whole | result on this cohort |
+| split | promises to keep whole | result on this transaction set |
 |---|---|---|
 | `split_temporal` | `group_incident`, plus chronology | **clean** — 0 incidents straddle; train ends 2024-12-29, test starts 2025-01-01 |
 | `split_incident` | `group_incident` | **clean** — 0 straddle |
 | `split_protocol` | `group_protocol` | **clean** — 0 straddle |
 | `split_address` | `group_address` | **clean** — 0 straddle |
-| `split_cross_chain` | — | metadata only: on an Ethereum-only cohort its test side is empty by construction |
+| `split_cross_chain` | — | metadata only: on an Ethereum-only transaction set its test side is empty by construction |
 
 No duplicate hashes in any split. **No corrected split was needed**, so none was
 published; had one been, it would have appeared under a new name
@@ -119,7 +119,7 @@ predictions and the frozen manifest, and the two meet only here.
 - A **binary-only detector** is reported at its actual operating point and gets
   no ranking metric, with that stated.
 - A **paired comparison** runs on the hashes every model actually scored, next to
-  each model's coverage of the full cohort.
+  each model's coverage of the full transaction set.
 - Sampled negatives support historical comparison. **Alerts per day would require
   traffic observation and are not reported.** External pretraining and possible
   test overlap must be documented when a model is added.

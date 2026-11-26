@@ -8,6 +8,9 @@
 [cohort]
 chain_id = 1
 release_dir = "data/upstream/txbench"
+# The DOI of the pinned release. Recorded as provenance on every import, so it
+# cannot be lost by forgetting `--doi`; pass `--doi` only to override it.
+release_doi = "10.5281/zenodo.23758032"
 
 [collect]
 pilot_size = 20

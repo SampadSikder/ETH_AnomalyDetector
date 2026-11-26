@@ -186,3 +186,10 @@ def test_no_real_transaction_supplies_call_nesting(real):
             continue
         assert tx.call_tree_has_nesting is False
         assert "call_tree_nesting" in tx.field_gaps
+
+
+def test_the_recorded_provenance_names_the_release_doi():
+    """Section 1 requires the DOI on the published manifest's provenance."""
+    provenance = json.loads((REPO / "data" / "manifest" / "release_provenance.json").read_text())
+    assert provenance["doi"], "release_provenance.json records no DOI"
+    assert provenance["release_id"] == "TxBench-v1.0.1"

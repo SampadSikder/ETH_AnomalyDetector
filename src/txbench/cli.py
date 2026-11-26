@@ -52,8 +52,10 @@ def _release(cfg, layout, args: argparse.Namespace):
     directory = Path(args.release_dir) if getattr(args, "release_dir", None) else cfg.release_dir
     if not directory.is_absolute():
         directory = layout.root / directory
+    # An explicit --doi wins; otherwise the DOI pinned in the config is used, so
+    # a plain re-import still records it instead of silently dropping it.
     return load_release(directory, release_id=getattr(args, "release_id", None),
-                        doi=getattr(args, "doi", None),
+                        doi=getattr(args, "doi", None) or cfg.release_doi,
                         verify_checksums=not getattr(args, "skip_checksums", False))
 
 
@@ -507,7 +509,8 @@ def build_parser() -> argparse.ArgumentParser:
     def release_args(p):
         p.add_argument("--release-dir", help="the upstream TxBench release directory")
         p.add_argument("--release-id", help="override the recorded release identifier")
-        p.add_argument("--doi", help="the release DOI, recorded as provenance")
+        p.add_argument("--doi", help="the release DOI, recorded as provenance; "
+                                    "defaults to cohort.release_doi in the config")
         p.add_argument("--skip-checksums", action="store_true",
                        help="skip SHA256SUMS verification (not recommended)")
 

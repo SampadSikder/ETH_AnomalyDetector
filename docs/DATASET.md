@@ -1,4 +1,9 @@
-# The cohort
+# The transaction set
+
+The transaction set is the fixed list of transactions this benchmark runs on:
+1,632 Ethereum mainnet transactions chosen out of the release's 3,036, with
+nothing added or removed afterwards. The fingerprint below pins that exact list,
+so any later run can prove it used the same transactions.
 
 ## Source
 
@@ -6,13 +11,9 @@
 |---|---|
 | Release | `TxBench-v1.0.1` |
 | DOI | [10.5281/zenodo.23758032](https://doi.org/10.5281/zenodo.23758032) |
-| Paper | [TxBench: Verifying Public Incident Data to Benchmark Smart-Contract Attack Detectors](https://arxiv.org/abs/2611.04411v1) (MSR 2027 Data and Tool Showcase) |
 | Archive | `TxBench-v1.0.1.zip`, 2,855,342,387 bytes, md5 `1e57920ae8e19b6245e7548ad4e5bd9d` (verified against the record on download) |
 | Access | Open. The paper describes restricted archive files; the published record is in fact openly downloadable, which is what `bench fetch-release` uses. |
 | Files read | 18 roles resolved, 0 missing; every one recorded with its SHA-256 in `data/manifest/release_provenance.json` |
-
-`bench import-txbench` verifies each file it reads against the release's own
-`SHA256SUMS` where that file declares it, and refuses to import on a mismatch.
 
 ## Row counts, before and after every filter
 
@@ -24,7 +25,13 @@
 | collapse_duplicates | 1,632 | 1,632 | 0 |
 
 Dropped by chain: BSC 927, Base 195, Arbitrum 129, Optimism 75, Polygon 51,
-Avalanche 27.
+Avalanche 27. Those transactions are removed here, not kept aside for later: no
+chain other than Ethereum appears anywhere in the set, including in the training
+rows. Each chain's total is exactly three times its accepted-attack count
+because the release pairs every attack with two negatives sampled on the same
+chain, so a chain leaves as one whole block. Ethereum keeps that same 1:2 ratio,
+which is why the filter changes no label balance: 33.3% attacks before and
+after.
 
 **Result: 1,632 rows — 544 attacks and 1,088 negatives.** This matches the
 paper's v1 cross-check for Ethereum exactly (544 attacks, 1,088 negatives before
@@ -33,7 +40,7 @@ counts are not hard-coded anywhere; `tests/test_real_release.py` asserts them
 against the pinned release, and the chain filter reports its own arithmetic.
 
 Attack classes, verbatim from the release's `category` column:
-**exploit 386**, **key_compromise 158**. Negatives by category:
+**exploit 386**, **key_compromise 158**. Benign transactions by category:
 behavioral_hard 465, financial_hard 279, ordinary 186, deployment 158 — all
 `tier1_verified`.
 
@@ -53,7 +60,7 @@ behavioral_hard 465, financial_hard 279, ordinary 186, deployment 158 — all
 - Labels apply to whole transactions and are imported exactly as supplied; no
   label is inferred, re-derived or adjusted.
 
-The fixture cohort exercises each of these paths; see `tests/test_importer.py`.
+The fixture set exercises each of these paths; see `tests/test_importer.py`.
 
 ## Reproducibility
 
@@ -84,7 +91,7 @@ change fails loudly instead of silently shifting a label.
 | `benign_category` | `category`, kept only when the row is a negative |
 | `label_tier` | `label_confidence` (`oracle_accepted` for attacks, tier for negatives) |
 | `group_incident`, `group_protocol`, `group_address` | the same three columns |
-| `block_number`, `block_timestamp` | the same, the cohort's chain location |
+| `block_number`, `block_timestamp` | the same, the transaction's chain location |
 | `split_*` | every upstream split column, imported verbatim |
 
 ## Trace completeness
@@ -124,4 +131,4 @@ Because third-party terms vary per item, **this repository redistributes no
 upstream bytes.** `data/upstream/` is git-ignored and is rebuilt from the DOI by
 `bench fetch-release`. Review `DATASET_LICENSE.md` sections 2 and 3 before
 packaging any upstream data for distribution. Cite the paper and the record's
-DOI when using the cohort.
+DOI when using this transaction set.

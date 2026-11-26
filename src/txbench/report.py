@@ -53,7 +53,7 @@ def write_cohort_report(result, path: Path) -> Path:
     """The cohort report: row counts before and after every filter."""
     meta = result.meta
     lines = [
-        "# Cohort report",
+        "# Transaction set report",
         "",
         f"- generated: {meta['generated_utc']}",
         f"- release: `{meta['release']['release_id']}`"
@@ -61,7 +61,7 @@ def write_cohort_report(result, path: Path) -> Path:
         f"- fixture data: **{meta['is_fixture']}**",
         f"- chain id: {meta['chain_id']}",
         f"- rows: **{meta['rows']}**",
-        f"- cohort digest (sorted {', '.join(meta['cohort_digest_fields'])}): "
+        f"- transaction-list fingerprint (sorted {', '.join(meta['cohort_digest_fields'])}): "
         f"`{meta['cohort_sha256']}`",
         "",
         "## Filters",
@@ -145,18 +145,20 @@ def write_status_report(layout, cfg) -> dict[str, Path]:
         "",
     ]
 
-    lines += ["## 1. Cohort", ""]
+    lines += ["## 1. Transaction set", ""]
     if manifest_meta:
         lines += [
-            f"- release `{manifest_meta['release']['release_id']}`, chain "
-            f"{manifest_meta['chain_id']}",
+            f"- release `{manifest_meta['release']['release_id']}`"
+            + (f" (DOI {manifest_meta['release']['doi']})"
+               if manifest_meta["release"].get("doi") else "")
+            + f", chain {manifest_meta['chain_id']}",
             f"- rows: **{manifest_meta['rows']}**; labels "
             f"{manifest_meta['label_counts']}; attack classes "
             f"{manifest_meta['attack_class_counts']}",
-            f"- cohort digest: `{manifest_meta['cohort_sha256']}`",
+            f"- transaction-list fingerprint: `{manifest_meta['cohort_sha256']}`",
             f"- quarantined: {manifest_meta['quarantined_rows']} "
             f"{manifest_meta['quarantine_reasons']}",
-            f"- full cohort report: `{layout.cohort_report.relative_to(layout.root)}`",
+            f"- full transaction-set report: `{layout.cohort_report.relative_to(layout.root)}`",
             "",
         ]
     else:
@@ -342,6 +344,7 @@ def write_status_report(layout, cfg) -> dict[str, Path]:
             "rows": manifest_meta["rows"], "labels": manifest_meta["label_counts"],
             "attack_classes": manifest_meta["attack_class_counts"],
             "cohort_sha256": manifest_meta["cohort_sha256"],
+            "doi": manifest_meta["release"].get("doi"),
             "release_id": manifest_meta["release"]["release_id"]},
         "collection": plan and {"planned_calls": plan.get("planned_calls_total"),
                                 "estimates": plan.get("estimates")},
