@@ -26,8 +26,28 @@ REBUILD_STEPS = [
     "conda run -n txbench bench build-features --view tx-receipt",
     "conda run -n txbench bench build-features --view full-calls-receipt",
     "conda run -n txbench bench build-tasks",
+    "# recover the missing call nesting from the public BigQuery traces view, then the",
+    "# creation frames' init code. Both price the scan first and refuse an unbounded one.",
+    "conda run -n txbench bench enrich-traces --select all --expect 1632 --dry-run",
+    "conda run -n txbench bench enrich-traces --select all --expect 1632 --budget-bytes 428403999502",
+    "conda run -n txbench bench backfill-init --dry-run",
+    "conda run -n txbench bench backfill-init",
     "conda run -n txbench bench validate-adapters",
-    "conda run -n txbench bench evaluate --predictions fixtures/example_predictions.csv --fixture-mode",
+    "# the three detectors. BlockScan needs the authors' own assets (config/, model/) and",
+    "# their pinned dependency set in a separate interpreter; see docs/EVALUATION.md.",
+    "conda run -n txbench bench score-blockscan --smoke-only",
+    "conda run -n txbench bench score-blockscan",
+    "conda run -n txbench bench train-defiguard",
+    "conda run -n txbench bench train-ft-transformer",
+    "conda run -n txbench bench compare-detectors",
+    "conda run -n txbench bench evaluate --predictions data/evaluation/predictions/predictions_all.csv \\",
+    "  --task exploit --out data/evaluation/evaluation_exploit.json",
+    "conda run -n txbench bench evaluate --predictions data/evaluation/predictions/predictions_all.csv \\",
+    "  --task key_compromise --out data/evaluation/evaluation_key_compromise.json \\",
+    "  --thresholds-from data/evaluation/evaluation_exploit.json",
+    "conda run -n txbench bench analyze-misses --attack-class key_compromise",
+    "conda run -n txbench bench topk --task exploit",
+    "conda run -n txbench bench seed-sweep --seeds 42-51",
     "conda run -n txbench bench report",
 ]
 
@@ -126,7 +146,15 @@ def write_status_report(layout, cfg) -> dict[str, Path]:
     splits = _read_json(layout.splits_dir / "splits_report.json")
     adapters = _read_json(layout.adapters_dir / "cohort" / "adapter_report.json") or \
         _read_json(layout.adapters_dir / "pilot" / "adapter_report.json")
-    evaluation = _read_json(layout.eval_dir / "evaluation.json")
+    # The real historical run writes one artifact per task; the fixture run writes
+    # `evaluation.json`. Prefer the real one and say which file was read, so a
+    # fixture number can never be mistaken for a measurement.
+    evaluation_path = layout.eval_dir / "evaluation_exploit.json"
+    if not evaluation_path.is_file():
+        evaluation_path = layout.eval_dir / "evaluation.json"
+    evaluation = _read_json(evaluation_path)
+    key_compromise = _read_json(layout.eval_dir / "evaluation_key_compromise.json")
+    comparison = _read_json(layout.eval_dir / "predictions" / "comparison.json")
     tasks = _read_json(layout.eval_dir / "tasks" / "tasks.json")
     views = {}
     for view in ("tx_receipt", "full_calls_receipt"):
@@ -310,6 +338,8 @@ def write_status_report(layout, cfg) -> dict[str, Path]:
 
     lines += ["## 7. Evaluation", ""]
     if evaluation:
+        lines += [f"- source: `{Path(evaluation_path).name}`"
+                  f" (task: {(evaluation.get('task') or {}).get('task')})", ""]
         parity = evaluation.get("upstream_evaluator_parity") or {}
         lines += [f"- upstream evaluator parity: **{parity.get('status')}**"
                   + (f" - {parity.get('reason')}" if parity.get("reason") else ""), ""]
@@ -319,14 +349,25 @@ def write_status_report(layout, cfg) -> dict[str, Path]:
         rows = []
         for name, slot in sorted((evaluation.get("models") or {}).items()):
             test = slot.get("test") or {}
-            rows.append([name, test.get("recall"), test.get("precision"),
+            recall_by_class = {k: v.get("recall")
+                               for k, v in (test.get("recall_by_attack_class") or {}).items()}
+            if key_compromise:
+                other = ((key_compromise.get("models") or {}).get(name) or {}).get("test") or {}
+                for klass, block in (other.get("recall_by_attack_class") or {}).items():
+                    recall_by_class.setdefault(klass, block.get("recall"))
+            rows.append([name, (slot.get("threshold_selection") or {}).get("threshold"),
+                         test.get("recall"), test.get("precision"), test.get("f1"),
                          test.get("average_precision"),
-                         test.get("false_positives_per_1000_negatives"),
-                         test.get("incident_weighted_recall"),
-                         json.dumps(test.get("scored_by_class") or {}, sort_keys=True)])
-        lines += [_table(rows, ["model", "recall", "precision", "avg precision",
-                                "FP / 1k negatives", "incident-weighted recall",
-                                "scored by class"]), ""]
+                         f"{test.get('false_positives')}/{test.get('negatives_scored')}",
+                         test.get("coverage_of_partition"),
+                         json.dumps(recall_by_class, sort_keys=True)])
+        lines += [_table(rows, ["model", "threshold", "recall", "precision", "F1",
+                                "avg precision", "FP / negatives", "test coverage",
+                                "recall by attack class"]), ""]
+        if comparison:
+            lines += [f"- transactions every model scored: "
+                      f"**{comparison.get('scored_by_every_model')}** of "
+                      f"{comparison.get('transactions_in_split')}", ""]
     else:
         lines += ["_no predictions scored yet: run `bench evaluate --predictions ...`._", ""]
 
@@ -354,6 +395,8 @@ def write_status_report(layout, cfg) -> dict[str, Path]:
                                     for k, v in (splits.get("audits") or {}).items()},
         "evaluator_parity": evaluation and
         (evaluation.get("upstream_evaluator_parity") or {}).get("status"),
+        "evaluation_source": str(Path(evaluation_path).name) if evaluation else None,
+        "detector_models": evaluation and sorted((evaluation.get("models") or {})),
         "artifacts": _artifact_index(layout),
     }
     summary_path = layout.reports_dir / "status.json"
@@ -386,11 +429,45 @@ def _artifact_index(layout) -> dict[str, str]:
         "feature_matrices_tx_receipt": layout.features_dir / "tx_receipt",
         "feature_matrices_full_calls": layout.features_dir / "full_calls_receipt",
         "reconciliation": layout.reports_dir / "reconciliation.json",
+        "trace_backfill_pilot": layout.data / "collection" / "trace_backfill_pilot.parquet",
+        "trace_backfill_coverage": (layout.data / "collection"
+                                    / "trace_backfill_coverage.parquet"),
+        "trace_backfill_report": layout.data / "collection" / "trace_backfill_report.json",
+        "bigquery_schema": layout.data / "collection" / "bigquery_schema.json",
+        "bigquery_budget": layout.data / "collection" / "bigquery_budget.json",
         "tasks": layout.eval_dir / "tasks" / "tasks.json",
         "adapter_report_cohort": layout.adapters_dir / "cohort" / "adapter_report.json",
         "adapter_report_pilot": layout.adapters_dir / "pilot" / "adapter_report.json",
         "compatibility_table_cohort": layout.adapters_dir / "cohort" / "compatibility_table.parquet",
         "evaluation": layout.eval_dir / "evaluation.json",
+        "evaluation_exploit": layout.eval_dir / "evaluation_exploit.json",
+        "evaluation_key_compromise": layout.eval_dir / "evaluation_key_compromise.json",
+        "miss_analysis_key_compromise": (layout.eval_dir
+                                        / "miss_analysis_key_compromise.json"),
+        "topk_metrics": layout.eval_dir / "topk" / "topk_metrics.json",
+        "topk_selections": layout.eval_dir / "topk" / "topk_selections.parquet",
+        "seed_sweep": layout.eval_dir / "seeds" / "seed_sweep.json",
+        "seed_sweep_scores": layout.eval_dir / "seeds" / "seed_sweep_scores.parquet",
+        "call_io_audit": layout.adapters_dir / "cohort" / "call_io_audit.json",
+        "init_backfill_report": layout.data / "collection" / "init_backfill_report.json",
+        "targeted_init_backfill_sql": layout.data / "collection" / "targeted_init_backfill.sql",
+        "blockscan_assets_provenance": (layout.upstream / "detectors" / "blockscan"
+                                        / "ASSETS.json"),
+        "blockscan_run": layout.eval_dir / "detectors" / "blockscan_run.json",
+        "blockscan_smoke": layout.eval_dir / "detectors" / "blockscan_smoke.json",
+        "defiguard_run": layout.eval_dir / "detectors" / "defiguard_run.json",
+        "defiguard_checkpoint": layout.eval_dir / "detectors" / "defiguard_gnn.pt",
+        "ft_transformer_run": layout.eval_dir / "detectors" / "ft_transformer_run.json",
+        "predictions_blockscan": layout.eval_dir / "detectors" / "predictions_blockscan.csv",
+        "predictions_defiguard": layout.eval_dir / "detectors" / "predictions_defiguard.csv",
+        "predictions_ft_transformer": (layout.eval_dir / "detectors"
+                                       / "predictions_ft_transformer.csv"),
+        "predictions_all": layout.eval_dir / "predictions" / "predictions_all.csv",
+        "predictions_per_transaction": (layout.eval_dir / "predictions"
+                                        / "per_transaction.parquet"),
+        "predictions_per_transaction_scores": (layout.eval_dir / "predictions"
+                                               / "per_transaction_scores.parquet"),
+        "detector_comparison": layout.eval_dir / "predictions" / "comparison.json",
         "features_tx_receipt": layout.features_dir / "tx_receipt" / "feature_dictionary.json",
         "features_full_calls": layout.features_dir / "full_calls_receipt" / "feature_dictionary.json",
     }

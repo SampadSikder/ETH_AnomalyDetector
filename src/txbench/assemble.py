@@ -72,3 +72,17 @@ def labels_of(manifest: pd.DataFrame) -> dict[str, int]:
 def incidents_of(manifest: pd.DataFrame) -> dict[str, str]:
     return {row.tx_key: (row.group_incident or row.tx_key)
             for row in manifest.itertuples(index=False)}
+
+
+def attack_classes_of(manifest: pd.DataFrame) -> dict[str, str]:
+    """The attack class of every *attack*, for per-class recall.
+
+    Negatives are absent rather than given a class of their own: a negative has
+    no attack class, and inventing one would put it in a recall denominator.
+    """
+    out: dict[str, str] = {}
+    for row in manifest.itertuples(index=False):
+        if int(row.label) != 1:
+            continue
+        out[row.tx_key] = str(getattr(row, "attack_class", None) or "unclassified")
+    return out

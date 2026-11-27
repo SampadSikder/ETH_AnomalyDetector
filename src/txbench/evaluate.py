@@ -283,9 +283,36 @@ def select_threshold(bundle: PredictionSet, labels: dict[str, int], validation_k
             "validation_rows": len(rows), **best}
 
 
+def _recall_by_attack_class(flags: dict[str, bool], labels: dict[str, int],
+                            attack_classes: dict[str, str], keys: Iterable[str],
+                            scored: Iterable[str]) -> dict[str, dict[str, Any]]:
+    """Recall per attack class, with the eligible and scored counts beside it.
+
+    A class whose transactions were not all scored would otherwise look better
+    or worse than it is, so the denominators are reported, not just the ratio.
+    """
+    scored = set(scored)
+    out: dict[str, dict[str, Any]] = {}
+    for key in keys:
+        if labels.get(key) != 1:
+            continue
+        name = attack_classes.get(key, "unclassified")
+        slot = out.setdefault(name, {"eligible": 0, "scored": 0, "detected": 0})
+        slot["eligible"] += 1
+        if key in scored:
+            slot["scored"] += 1
+            slot["detected"] += int(bool(flags.get(key)))
+    for slot in out.values():
+        slot["recall"] = (slot["detected"] / slot["scored"]) if slot["scored"] else None
+        slot["recall_over_eligible"] = (slot["detected"] / slot["eligible"]
+                                        if slot["eligible"] else None)
+    return out
+
+
 def score_partition(bundle: PredictionSet, labels: dict[str, int], keys: Iterable[str],
                     *, threshold: float | None, incidents: dict[str, str] | None = None,
-                    partition: str = "test") -> dict[str, Any]:
+                    partition: str = "test",
+                    attack_classes: dict[str, str] | None = None) -> dict[str, Any]:
     """Metrics for one partition at a fixed threshold (or a binary verdict)."""
     keys = list(keys)
     eligible_by_class = Counter(("attack" if labels.get(k) == 1 else
@@ -326,7 +353,13 @@ def score_partition(bundle: PredictionSet, labels: dict[str, int], keys: Iterabl
         "precision": precision, "recall": recall,
         "f1": (2 * precision * recall / (precision + recall)
                if precision and recall else None),
+        # The raw count and its denominator, because "N false positives out of M
+        # labeled negatives" is the number an operator actually feels.
+        "false_positives": fp,
+        "negatives_scored": negatives,
         "false_positives_per_1000_negatives": (fp / negatives * 1000) if negatives else None,
+        "recall_by_attack_class": _recall_by_attack_class(
+            flags, labels, attack_classes or {}, keys, scored_keys),
         "incident_weighted_recall": _incident_weighted_recall(
             flags, labels, incidents or {}, scored_keys),
         "coverage_of_partition": round(len(scored_keys) / len(keys), 6) if keys else None,
@@ -354,7 +387,8 @@ def score_partition(bundle: PredictionSet, labels: dict[str, int], keys: Iterabl
 def paired_comparison(results: dict[str, dict[str, Any]], bundles: dict[str, PredictionSet],
                       labels: dict[str, int], keys: Iterable[str], *,
                       thresholds: dict[str, float | None],
-                      incidents: dict[str, str] | None = None) -> dict[str, Any]:
+                      incidents: dict[str, str] | None = None,
+                      attack_classes: dict[str, str] | None = None) -> dict[str, Any]:
     """Compare models on the hashes all of them actually scored."""
     keys = list(keys)
     scored_sets = {}
@@ -366,7 +400,7 @@ def paired_comparison(results: dict[str, dict[str, Any]], bundles: dict[str, Pre
     shared = set.intersection(*scored_sets.values()) if scored_sets else set()
     paired = {name: score_partition(bundles[name], labels, sorted(shared),
                                     threshold=thresholds.get(name), incidents=incidents,
-                                    partition="test_shared")
+                                    partition="test_shared", attack_classes=attack_classes)
               for name in bundles}
     return {
         "models": sorted(bundles),

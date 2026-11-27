@@ -24,6 +24,21 @@ TREE_UNKNOWN = "unknown"          # frames present, completeness not asserted
 CALL_TYPES_WITH_INPUT = {"CALL", "DELEGATECALL", "STATICCALL", "CALLCODE"}
 CREATE_TYPES = {"CREATE", "CREATE2"}
 
+#: Frame kinds that cannot carry calldata, whatever the source. SELFDESTRUCT
+#: takes no arguments and returns nothing: it sweeps the balance to a
+#: beneficiary. `SUICIDE` is the warehouse's spelling of the same opcode, and
+#: `REWARD` is a block-level trace, not a call. For these frames absent
+#: input/output bytes are **not applicable**, not missing - no source could ever
+#: supply them, so counting them as a gap would state a permanently unmeetable
+#: requirement. A CREATE is deliberately not here: its init code is real
+#: calldata, carried in `action.init`.
+NO_CALLDATA_TYPES = {"SELFDESTRUCT", "SUICIDE", "REWARD"}
+
+
+def frame_takes_calldata(frame: "CallFrame") -> bool:
+    """False when the frame's kind makes call I/O bytes inapplicable."""
+    return (frame.call_type or "UNKNOWN").upper() not in NO_CALLDATA_TYPES
+
 
 @dataclass
 class ReceiptLog:
@@ -108,6 +123,10 @@ class NormalizedTx:
     call_tree_status: str = TREE_UNAVAILABLE
     call_tree_has_nesting: bool = False
     call_tree_includes_root: bool = False
+    #: True once a source supplied real parent pointers, so each frame's
+    #: `reverted` is either a decided bool or an explicit unknown (None).
+    #: A flat frame list leaves this false: nothing was ever decided.
+    call_tree_ancestry_known: bool = False
     # provenance
     sources: dict[str, str] = field(default_factory=dict)   # section -> source name
     field_gaps: dict[str, str] = field(default_factory=dict)  # field -> reason

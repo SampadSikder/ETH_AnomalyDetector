@@ -115,9 +115,16 @@ def test_blockscan_entry_point_runs_but_is_labelled_degraded(tx_of):
     assert result["fidelity"] == "degraded"
     assert result["nested_calls_supplied"] == 0
     assert "[START]" in result["tokens_head"]
-    # the driver needs config files the pinned revision does not ship
-    assert result["driver_available"] is False
-    assert "config/top_20k_address.txt" in result["driver_missing_files"]
+    # The driver needs two config files the pinned revision does not ship; they are
+    # distributed through the authors' Drive release, so whether it can run depends on
+    # whether that release was fetched. Either way the report must say which it is.
+    present = all((BLOCKSCAN_REPO / name).is_file() for name in
+                  ("config/top_20k_address.txt", "config/top_20k_hash.txt"))
+    assert result["driver_available"] is present
+    if not present:
+        assert "config/top_20k_address.txt" in result["driver_missing_files"]
+    else:
+        assert result["driver_missing_files"] == []
 
 
 @pytest.mark.skipif(not BLOCKSCAN_REPO.is_dir(), reason="no pinned checkout")
@@ -128,3 +135,49 @@ def test_blockscan_conversion_omits_zero_topic_logs_rather_than_crashing(tx_of):
     result = run_smoke(tx_of(4), BLOCKSCAN_REPO)
     assert result["ran"] is True
     assert result["zero_topic_logs_omitted"] == 1
+
+
+def _blockscan_check(tx):
+    """One blockscan row through the normal audit entry point."""
+    return {c.tx_key: c for c in audit([(tx.tx_key, tx)], ["blockscan"])}[tx.tx_key]
+
+
+def _frame(tx, call_type, input_hex):
+    from txbench.trace_model import CallFrame
+    return CallFrame(index=len(tx.frames), call_type=call_type,
+                     from_address=tx.frames[0].from_address,
+                     to_address=tx.frames[0].to_address, value_wei=1,
+                     input_hex=input_hex, parent_index=tx.frames[0].index, depth=1)
+
+
+def test_selfdestruct_call_io_is_not_applicable_rather_than_missing(tx_of):
+    tx = tx_of(1)
+    assert "call_io_bytes" in _blockscan_check(tx).available_fields, "baseline: all frames filled"
+    tx.frames.append(_frame(tx, "SUICIDE", None))
+    check = _blockscan_check(tx)
+    assert "call_io_bytes" in check.available_fields
+    assert "call_io_bytes" not in check.missing_reasons
+    assert check.notes["frames_without_calldata_by_kind"] == 1
+    assert check.notes["frames_taking_calldata"] == check.notes["frames"] - 1
+    assert check.notes["frames_with_input"] == check.notes["frames_taking_calldata"]
+
+
+def test_a_call_frame_without_input_is_still_missing_alongside_a_selfdestruct(tx_of):
+    tx = tx_of(1)
+    tx.frames.append(_frame(tx, "SUICIDE", None))
+    tx.frames.append(_frame(tx, "DELEGATECALL", None))
+    check = _blockscan_check(tx)
+    assert "call_io_bytes" in check.missing_fields
+    reason = check.missing_reasons["call_io_bytes"]
+    assert reason.startswith("1 of "), reason
+    assert "1 frame(s) carry no calldata by kind" in reason
+    assert check.notes["frames_without_calldata_by_kind"] == 1
+
+
+def test_a_creation_frame_without_init_code_is_not_excused_by_the_rule(tx_of):
+    """CREATE init code is real calldata: `action.init` carries it."""
+    tx = tx_of(1)
+    tx.frames.append(_frame(tx, "CREATE", None))
+    check = _blockscan_check(tx)
+    assert "call_io_bytes" in check.missing_fields
+    assert check.notes["frames_without_calldata_by_kind"] == 0

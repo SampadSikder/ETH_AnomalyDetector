@@ -4,8 +4,13 @@ The pinned revision's `src_eth/preprocess.py` is imported from disk and its
 real `extract_function_calls` is called on a record converted from our
 normalised transaction. Two things are reported honestly:
 
-  * the conversion carries **no nested `calls`**, because the release supplies
-    a flat frame list - so the run is `upstream_preprocess_degraded`;
+  * the conversion carries **no nested `calls`** when the frames came from the
+    release, because it supplies a flat frame list - so that run is
+    `upstream_preprocess_degraded`. Once a reconstruction supplies real parent
+    pointers (`calltree.py`), the nested `calls` are emitted and the run is
+    reported as `nested`. Even then, logs stay on the outer call: a receipt
+    does not say which frame emitted which log, and guessing would invent
+    structure;
   * the driver `write_all_traces` needs `config/top_20k_address.txt` and
     `config/top_20k_hash.txt`, which the pinned revision does not contain, so
     the driver is reported as unavailable rather than approximated silently.
@@ -37,8 +42,9 @@ def to_blockscan_record(tx: NormalizedTx) -> dict[str, Any]:
     """Convert to the shape `extract_function_calls` reads.
 
     Fidelity notes, all deliberate:
-      * `calls` is omitted - we have no nesting, and inventing one would
-        fabricate structure the chain never showed us;
+      * `calls` is omitted when the frames carry no nesting - inventing one
+        would fabricate structure the chain never showed us - and emitted from
+        the real parent pointers when a reconstruction supplied them;
       * `args` / `output` are emitted only where the release decoded them (the
         outer call), with their upstream types;
       * logs keep topic 0 first, matching the preprocessor's indexing.
@@ -71,7 +77,47 @@ def to_blockscan_record(tx: NormalizedTx) -> dict[str, Any]:
             "topics": topics,
             "data": [{"type": "data", "data": log_record.data_hex}] if log_record.data_hex else [],
         })
+    if tx.call_tree_has_nesting:
+        nested = _nested_calls(tx)
+        if nested:
+            record["calls"] = nested
     return record
+
+
+def _nested_calls(tx: NormalizedTx) -> list[dict[str, Any]]:
+    """Build the nested `calls` list from real parent pointers only.
+
+    A frame that reverted - itself or through an ancestor - is kept: BlockScan
+    reads the attempted call sequence, and dropping attempts would change the
+    token stream. The revert is visible in the frame's own fields.
+    """
+    children: dict[int | None, list[Any]] = {}
+    root = None
+    for frame in tx.frames:
+        if frame.is_root:
+            root = frame
+            continue
+        children.setdefault(frame.parent_index, []).append(frame)
+
+    def node(frame: Any) -> dict[str, Any]:
+        record = {
+            "type": frame.call_type,
+            "from": frame.from_address,
+            "to": frame.to_address,
+            "func": _selector(frame.input_hex),
+            "gas": frame.gas,
+            "value": frame.value_wei,
+            "args": None,
+            "output": None,
+            "logs": [],
+        }
+        kids = children.get(frame.index) or []
+        if kids:
+            record["calls"] = [node(k) for k in sorted(kids, key=lambda f: f.index)]
+        return record
+
+    top = children.get(root.index if root is not None else None) or []
+    return [node(f) for f in sorted(top, key=lambda f: f.index)]
 
 
 def _selector(input_hex: str | None) -> str | None:
@@ -103,9 +149,13 @@ def run_smoke(tx: NormalizedTx, repo_dir: Path) -> dict[str, Any]:
         "tx_key": tx.tx_key,
         "repo_dir": str(repo_dir),
         "entry_point": f"{ENTRY_RELATIVE}::extract_function_calls",
-        "fidelity": "degraded",
-        "fidelity_reason": "the converted record carries no nested `calls`: the release supplies "
-                           "an ordered flat frame list with no parent pointers",
+        "fidelity": "nested" if tx.call_tree_has_nesting else "degraded",
+        "fidelity_reason": (
+            "the converted record carries nested `calls` rebuilt from real parent pointers; "
+            "logs remain on the outer call because a receipt does not attribute them to frames"
+            if tx.call_tree_has_nesting else
+            "the converted record carries no nested `calls`: the release supplies "
+            "an ordered flat frame list with no parent pointers"),
         "driver_available": False,
         "driver_missing_files": [],
         "ran": False,
@@ -134,5 +184,11 @@ def run_smoke(tx: NormalizedTx, repo_dir: Path) -> dict[str, Any]:
     out["tokens_head"] = [str(t) for t in tokens[:24]]
     out["zero_topic_logs_omitted"] = sum(1 for l in tx.logs if l.is_zero_topic)
     out["logs_converted"] = len(record["logs"])
-    out["nested_calls_supplied"] = 0
+    out["nested_calls_supplied"] = _count_nested(record.get("calls"))
     return out
+
+
+def _count_nested(calls: list[dict[str, Any]] | None) -> int:
+    if not calls:
+        return 0
+    return sum(1 + _count_nested(c.get("calls")) for c in calls)

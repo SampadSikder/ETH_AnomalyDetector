@@ -137,6 +137,21 @@ class SplitConfig:
 
 
 @dataclass
+class BigQueryConfig:
+    """The warehouse backfill. Nothing here is a credential.
+
+    `total_byte_budget` is the ceiling for *all* executed queries together. It
+    is deliberately `None` by default: with no budget configured the collector
+    dry-runs, prints the command that would spend bytes, and stops.
+    """
+    table: str = "bigquery-public-data.goog_blockchain_ethereum_mainnet_us.traces"
+    #: Total bytes this project may bill across runs. None = nothing executes.
+    total_byte_budget: int | None = None
+    #: Environment variable naming the billing project (never a key).
+    project_var: str = "GOOGLE_CLOUD_PROJECT"
+
+
+@dataclass
 class Config:
     chain_id: int = ETHEREUM_MAINNET
     release_dir: Path = Path("data/upstream/txbench")
@@ -144,6 +159,7 @@ class Config:
     collect: CollectConfig = field(default_factory=CollectConfig)
     features: FeatureConfig = field(default_factory=FeatureConfig)
     splits: SplitConfig = field(default_factory=SplitConfig)
+    bigquery: BigQueryConfig = field(default_factory=BigQueryConfig)
     providers: dict[str, ProviderConfig] = field(
         default_factory=lambda: {"alchemy": _alchemy_default(), "drpc": _drpc_default()})
     source_file: Path | None = None
@@ -165,6 +181,7 @@ class Config:
             "collect": asdict(self.collect),
             "features": asdict(self.features),
             "splits": {**asdict(self.splits)},
+            "bigquery": asdict(self.bigquery),
             "providers": {},
         }
         for name, p in self.providers.items():
@@ -175,7 +192,8 @@ class Config:
         return out
 
 
-_SECTION_TYPES = {"collect": CollectConfig, "features": FeatureConfig, "splits": SplitConfig}
+_SECTION_TYPES = {"collect": CollectConfig, "features": FeatureConfig, "splits": SplitConfig,
+                  "bigquery": BigQueryConfig}
 
 
 def load_config(path: Path | None = None, root: Path | None = None) -> Config:

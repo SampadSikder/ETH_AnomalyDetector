@@ -5,7 +5,8 @@ from typing import Any
 
 from ..extract import full_calls_receipt_tokens, tx_receipt_tokens
 from ..flows import build_flow_graph, defiguard_node_features
-from ..trace_model import (NormalizedTx, RECEIPT_OK, RECEIPT_PRE_BYZANTIUM, TREE_COMPLETE)
+from ..trace_model import (NormalizedTx, RECEIPT_OK, RECEIPT_PRE_BYZANTIUM, TREE_COMPLETE,
+                           frame_takes_calldata)
 from .base import (BLOCKED, DetectorSpec, FieldRequirement as F, PAPER_REIMPL, PARTIAL,
                    PROJECT_IMPL, SCHEMA_CHECK, TxCheck, UPSTREAM_DEGRADED, USABLE,
                    blocked_for_missing_record)
@@ -97,8 +98,11 @@ BLOCKSCAN = DetectorSpec(
         F("log_typed_topics", "each log's topics as typed values, with topic 0 present "
           "(`log['topics'][0]['data']` is indexed unconditionally, so a zero-topic log would "
           "raise)", source="receipt logs plus ABI decoding"),
-        F("call_io_bytes", "input and output bytes for each frame",
-          source="upstream enriched trace (input/output are supplied per frame)"),
+        F("call_io_bytes", "input and output bytes for each frame that can carry them; a "
+          "SELFDESTRUCT takes no arguments and returns nothing, so its call I/O is not "
+          "applicable and is not counted as missing",
+          source="upstream enriched trace plus `action.init` from the BigQuery traces table "
+                 "for creation frames"),
     ),
     attainable_evidence=(SCHEMA_CHECK, UPSTREAM_DEGRADED),
     evidence_notes="The pinned revision contains no `config/` (top_20k_address.txt, "
@@ -122,13 +126,22 @@ def check_blockscan(tx_key: str, tx: NormalizedTx | None) -> TxCheck:
         reasons["nested_calls"] = (
             "the release supplies an ordered flat frame list with no trace address, parent "
             "pointer or depth, so the recursive `calls` array cannot be reconstructed")
-    frames_with_input = sum(1 for f in tx.frames if f.input_hex is not None)
-    if frames_with_input == len(tx.frames) and tx.frames:
+    # Frames whose kind cannot carry calldata are not applicable, not missing:
+    # a SELFDESTRUCT has no arguments and no return value, so no source could
+    # ever fill them. They are counted and reported, never silently dropped.
+    applicable = [f for f in tx.frames if frame_takes_calldata(f)]
+    not_applicable = len(tx.frames) - len(applicable)
+    frames_with_input = sum(1 for f in applicable if f.input_hex is not None)
+    if tx.frames and frames_with_input == len(applicable):
         available.append("call_io_bytes")
     else:
         missing.append("call_io_bytes")
-        reasons["call_io_bytes"] = (f"{len(tx.frames) - frames_with_input} of {len(tx.frames)} "
-                                    "frames supplied no input bytes")
+        excluded = (f"; {not_applicable} frame(s) carry no calldata by kind "
+                    "(SELFDESTRUCT / REWARD) and are not counted"
+                    if not_applicable else "")
+        reasons["call_io_bytes"] = (
+            f"{len(applicable) - frames_with_input} of {len(applicable)} frames that can carry "
+            f"calldata supplied no input bytes{excluded}")
     decoded_frames = 0            # upstream decodes the outer call only
     if tx.logs_available:
         zero_topic = sum(1 for log in tx.logs if log.is_zero_topic)
@@ -156,7 +169,10 @@ def check_blockscan(tx_key: str, tx: NormalizedTx | None) -> TxCheck:
     return TxCheck(detector=BLOCKSCAN.key, tx_key=tx_key, verdict=verdict,
                    available_fields=available, missing_fields=missing, missing_reasons=reasons,
                    evidence=SCHEMA_CHECK,
-                   notes={"frames": len(tx.frames), "frames_with_input": frames_with_input,
+                   notes={"frames": len(tx.frames),
+                          "frames_taking_calldata": len(applicable),
+                          "frames_with_input": frames_with_input,
+                          "frames_without_calldata_by_kind": not_applicable,
                           "decoded_frames": decoded_frames,
                           "logs": tx.log_count})
 

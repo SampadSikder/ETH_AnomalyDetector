@@ -6,10 +6,15 @@ the ambiguities live, so each one gets a name instead of a guess:
   * **call types that move no value** - DELEGATECALL and STATICCALL cannot
     transfer the callee's balance, so their `value` field never becomes an edge;
   * **reverted ancestry** - a frame undone by an *ancestor's* failure leaves no
-    state change, but a flat frame list with no parent pointers cannot say who
-    an ancestor is. Native edges are therefore emitted only from a transaction
-    whose receipt succeeded and whose frames report no error; otherwise the
-    native side is marked incomplete rather than guessed;
+    state change, and a child can return successfully and still be undone when
+    its parent reverts later. With a flat frame list and no parent pointers,
+    nobody can say who an ancestor is, so native edges are emitted only from a
+    transaction whose receipt succeeded and whose frames report no error.
+    Where a reconstruction supplies real parent pointers (see `calltree.py`),
+    the rule becomes exact: a frame is excluded when it or any ancestor
+    reverted, and a frame whose ancestry could not be walked to the root keeps
+    an *unknown* revert state and makes the native side incomplete rather than
+    being counted as committed;
   * **ERC-20 / ERC-721 signature ambiguity** - `Transfer(address,address,uint256)`
     and ERC-721's `Transfer(address,address,uint256)` share one topic 0. The
     indexing differs (a fungible transfer carries the amount in `data`; an NFT
@@ -75,6 +80,12 @@ class FlowGraph:
     ambiguous_logs: int = 0
     skipped_non_moving_frames: int = 0
     reverted_frames: int = 0
+    #: Frames excluded because they, or an ancestor, reverted. Needs nesting.
+    excluded_reverted_frames: int = 0
+    #: Frames whose ancestry could not be resolved, so their state is unknown.
+    unresolved_ancestry_frames: int = 0
+    #: True when the exclusions above used real parent pointers.
+    ancestry_resolved: bool = False
 
     @property
     def complete(self) -> bool:
@@ -103,6 +114,9 @@ class FlowGraph:
             "token_complete": self.token_complete, "token_reason": self.token_reason,
             "skipped_non_moving_frames": self.skipped_non_moving_frames,
             "reverted_frames": self.reverted_frames,
+            "excluded_reverted_frames": self.excluded_reverted_frames,
+            "unresolved_ancestry_frames": self.unresolved_ancestry_frames,
+            "ancestry_resolved": self.ancestry_resolved,
             "distinct_assets": len({e.asset for e in self.edges}),
         }
 
@@ -131,6 +145,10 @@ def build_flow_graph(tx: NormalizedTx) -> FlowGraph:
     # --- native value, from the call frames -----------------------------------
     frames_errored = [f for f in tx.frames if f.error]
     graph.reverted_frames = len(frames_errored)
+    # Only meaningful once a source supplies nesting: a frame whose ancestry
+    # could not be resolved carries `reverted is None`, which is not false.
+    unresolved = [f for f in tx.frames if f.reverted is None] \
+        if tx.call_tree_ancestry_known else []
     succeeded = tx.receipt_status == 1
     if tx.call_tree_status != "complete":
         graph.native_reason = (f"call tree status is {tx.call_tree_status!r}: native value "
@@ -144,9 +162,20 @@ def build_flow_graph(tx: NormalizedTx) -> FlowGraph:
     elif frames_errored and not tx.call_tree_has_nesting:
         graph.native_reason = (f"{len(frames_errored)} frame(s) failed and the source supplies "
                                "no parent pointers, so reverted ancestry is unresolvable")
+    elif unresolved:
+        graph.unresolved_ancestry_frames = len(unresolved)
+        graph.native_reason = (f"{len(unresolved)} frame(s) could not be walked to the root, so "
+                               "whether an ancestor undid them is unknown")
     else:
         graph.native_complete = True
+        graph.ancestry_resolved = tx.call_tree_ancestry_known
         for frame in tx.frames:
+            # With real parent pointers, a frame that reverted - itself or
+            # through an ancestor - moved nothing, so it is not an edge.
+            if frame.reverted:
+                if frame.value_wei:
+                    graph.excluded_reverted_frames += 1
+                continue
             call_type = (frame.call_type or "").upper()
             if call_type in NON_MOVING_TYPES:
                 if frame.value_wei:
